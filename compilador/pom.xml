@@ -46,7 +46,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>br.ufscar.dc.compiladores.la.lexico.Principal</mainClass>
+                            <mainClass>br.ufscar.dc.compiladores.la.lexico.AnalisadorLexico</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
