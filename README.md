@@ -10,7 +10,7 @@ Projeto da disciplina de Construção de Compiladores 2026/01 da UFSCar.
 
 ## Sobre
 
-Este repositório contém um compilador para a linguagem LA, desenvolvido em etapas incrementais. Atualmente implementa o **analisador léxico** (T1) responsável por tokenizar programas em LA.
+Este repositório contém um compilador para a linguagem LA, desenvolvido em etapas incrementais. Atualmente implementa o **analisador sintático e léxico (T2)**, responsável por tokenizar programas em LA e realizar a análise sintática, apontando erros (léxicos ou sintáticos) com a respectiva linha e lexema.
 
 ## Pré-requisitos
 
@@ -19,7 +19,7 @@ Certifique-se de ter os seguintes programas e versões instalados:
 ### Java
 
 - **Versão mínima:** Java 11 ou superior
-- **Como verificar:** 
+- **Como verificar:**
   ```bash
   java -version
   ```
@@ -49,6 +49,7 @@ java -version
 1. Clone e acesse o repositório:
 
 2. Acesse a pasta do projeto Maven:
+
    ```bash
    cd compilador
    ```
@@ -72,30 +73,36 @@ java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
 ```
 
 **Parâmetros:**
+
 - `caminho/entrada.la` → Arquivo com código em linguagem LA
-- `caminho/saida.txt` → Arquivo onde será escrito o resultado (tokens ou erros)
+- `caminho/saida.txt` → Arquivo onde será escrito o resultado da análise.
 
 ### Exemplo de Uso
 
 ```bash
-# A partir da raiz do projeto
-cd compilador
-
+# A partir da pasta 'compilador'
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
-    ../testes/etapa1/caso1_entrada.la saida.txt
+    ../testes/etapa2/caso1_entrada.la saida.txt
 
 cat saida.txt
 ```
 
-**Saída esperada:**
+**Saída esperada (se não houver erros):**
+
 ```
-<'algoritmo','algoritmo'>
+Fim da compilacao
+```
+
+**Saída esperada (em caso de erro sintático):**
+
+```
+Linha 10: erro sintatico proximo a leia
+Fim da compilacao
 ```
 
 ## Executar Testes Automatizados
 
-Os casos de teste estão organizados em `/testes` por etapa (etapa1, etapa2, etapa3, etc.). O script `run-tests.sh` automatiza a compilação e execução dos testes.
-
+Os casos de teste estão organizados em `/testes` por etapa (etapa1, etapa2, etapa3, etc.). O script `run-tests.sh` automatiza a compilação e execução dos testes. O compilador foi adaptado para manter compatibilidade com a saída exigida no Trabalho 1 (T1) quando testado na pasta etapa1.
 
 **Nota:** O script `run-tests.sh` detecta e configura `JAVA_HOME` automaticamente.
 
@@ -118,5 +125,6 @@ Compila o projeto e executa todos os testes de todas as etapas, exibindo resulta
 ### Resultado dos Testes
 
 Cada teste exibe:
+
 - **PASS** → Saída do compilador corresponde à esperada
 - **FAIL** → Saída diferente da esperada (mostra primeiras linhas)
