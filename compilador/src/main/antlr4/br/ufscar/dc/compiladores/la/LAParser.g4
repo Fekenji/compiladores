@@ -1,12 +1,17 @@
 parser grammar LAParser;
 
 options {
-    tokenVocab=LALexer;
+    tokenVocab=LALexer; // Importa os tokens definidos previamente no analisador léxico
 }
 
+// Regra principal do programa: define a estrutura global
 programa : declaracoes 'algoritmo' corpo 'fim_algoritmo' EOF ;
+
+// Seção de Declarações
 declaracoes : decl_local_global* ;
 decl_local_global : declaracao_local | declaracao_global ;
+
+// Declarações locais: variáveis, constantes e tipos customizados
 declaracao_local : 'declare' variavel
                  | 'constante' IDENT ':' tipo_basico '=' valor_constante
                  | 'tipo' IDENT ':' tipo ;
@@ -19,10 +24,14 @@ tipo_basico_ident : tipo_basico | IDENT ;
 tipo_estendido : '^'? tipo_basico_ident ;
 valor_constante : CADEIA | NUM_INT | NUM_REAL | 'verdadeiro' | 'falso' ;
 registro : 'registro' variavel* 'fim_registro' ;
+
+// Declarações globais: procedimentos e funções
 declaracao_global : 'procedimento' IDENT '(' parametros? ')' declaracao_local* cmd* 'fim_procedimento'
                   | 'funcao' IDENT '(' parametros? ')' ':' tipo_estendido declaracao_local* cmd* 'fim_funcao' ;
 parametro : 'var'? identificador (',' identificador)* ':' tipo_estendido ;
 parametros : parametro (',' parametro)* ;
+
+// Seção de Comandos
 corpo : declaracao_local* cmd* ;
 cmd : cmdLeia | cmdEscreva | cmdSe | cmdCaso | cmdPara | cmdEnquanto | cmdFaca | cmdAtribuicao | cmdChamada | cmdRetorne ;
 cmdLeia : 'leia' '(' '^'? identificador (',' '^'? identificador)* ')' ;
@@ -40,6 +49,9 @@ item_selecao : constantes ':' cmd* ;
 constantes : numero_intervalo (',' numero_intervalo)* ;
 numero_intervalo : op_unario? NUM_INT ('..' op_unario? NUM_INT)? ;
 op_unario : '-' ;
+
+// Seção de Expressões
+// Expressões aritméticas, relacionais e lógicas com tratamento de precedência
 exp_aritmetica : termo (op1 termo)* ;
 termo : fator (op2 fator)* ;
 fator : parcela (op3 parcela)* ;

@@ -9,8 +9,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+// Classe principal responsável por inicializar o compilador e gerenciar a Entrada/Saída
 public class Principal {
     public static void main(String[] args) {
+        // Valida se os caminhos de entrada e saída foram passados via terminal
         if (args.length < 2) {
             System.out.println("Uso: java -jar <caminho_programa> <arquivo_entrada> <arquivo_saida>");
             return;
@@ -19,11 +21,12 @@ public class Principal {
         String arquivoEntrada = args[0];
         String arquivoSaida = args[1];
 
+        // Abre o arquivo de saída utilizando PrintWriter (fechamento automático via try-with-resources)
         try (PrintWriter pw = new PrintWriter(new File(arquivoSaida))) {
             CharStream cs = CharStreams.fromFileName(arquivoEntrada);
             LALexer lexer = new LALexer(cs);
 
-            // "HACK": Verifica se estamos rodando os testes da etapa 1 (T1)
+            // HACK: Mantém compatibilidade com os testes da Etapa 1 (T1) que exigem impressão de tokens
             if (arquivoEntrada.contains("etapa1")) {
                 Token t = null;
                 while ((t = lexer.nextToken()).getType() != Token.EOF) {
@@ -41,6 +44,7 @@ public class Principal {
                         break;
                     }
 
+                    // Formatação de tokens válidos para a etapa 1
                     if (nomeToken.equals("IDENT") || nomeToken.equals("CADEIA") || nomeToken.equals("NUM_INT") || nomeToken.equals("NUM_REAL")) {
                         pw.println("<'" + textoToken + "'," + nomeToken + ">");
                     } else {
@@ -48,11 +52,12 @@ public class Principal {
                     }
                 }
             }
-            // Lógica Oficial do T2 em diante (etapa2, etapa3, etc.)
+            // Fluxo principal para T2 e etapas seguintes (Análise Sintática)
             else {
                 CommonTokenStream tokens = new CommonTokenStream(lexer);
                 LAParser parser = new LAParser(tokens);
 
+                // Associa o ErrorListener customizado para salvar os erros no arquivo ao invés do terminal
                 CustomErrorListener mcel = new CustomErrorListener(pw);
                 lexer.removeErrorListeners();
                 lexer.addErrorListener(mcel);
@@ -60,8 +65,10 @@ public class Principal {
                 parser.addErrorListener(mcel);
 
                 try {
+                    // Inicia a análise chamando a regra raiz da gramática
                     parser.programa();
                 } catch (RuntimeException e) {
+                    // Captura a exceção forçada pelo ErrorListener para não poluir o console do usuário
                     if (!e.getMessage().equals("ParseError")) {
                         throw e;
                     }
