@@ -9,25 +9,45 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-// Classe principal responsável por inicializar o compilador e gerenciar a Entrada/Saída
 public class Principal {
     public static void main(String[] args) {
-        // Valida se os caminhos de entrada e saída foram passados via terminal
+        // Verifica o número mínimo de argumentos exigidos (pelo menos 2)
         if (args.length < 2) {
-            System.out.println("Uso: java -jar <caminho_programa> <arquivo_entrada> <arquivo_saida>");
+            System.out.println("Uso: java -jar <caminho_programa> [-t1] <arquivo_entrada> <arquivo_saida>");
             return;
         }
 
-        String arquivoEntrada = args[0];
-        String arquivoSaida = args[1];
+        boolean modoEtapa1 = false;
+        String arquivoEntrada = "";
+        String arquivoSaida = "";
 
-        // Abre o arquivo de saída utilizando PrintWriter (fechamento automático via try-with-resources)
+        // Lógica para interpretar os argumentos com a flag opcional
+        if (args.length == 3 && args[0].equals("-t1")) {
+            // Execução manual do utilizador informando a flag -t1
+            modoEtapa1 = true;
+            arquivoEntrada = args[1];
+            arquivoSaida = args[2];
+        } else if (args.length == 2) {
+            // Execução padrão do corretor automático (apenas 2 argumentos)
+            arquivoEntrada = args[0];
+            arquivoSaida = args[1];
+
+            // Fallback de segurança: mantém compatibilidade com o ./run-tests.sh etapa1
+            if (arquivoEntrada.contains("etapa1")) {
+                modoEtapa1 = true;
+            }
+        } else {
+            System.out.println("Número incorreto de argumentos.");
+            return;
+        }
+
+        // Fluxo de execução
         try (PrintWriter pw = new PrintWriter(new File(arquivoSaida))) {
             CharStream cs = CharStreams.fromFileName(arquivoEntrada);
             LALexer lexer = new LALexer(cs);
 
-            // HACK: Mantém compatibilidade com os testes da Etapa 1 (T1) que exigem impressão de tokens
-            if (arquivoEntrada.contains("etapa1")) {
+            if (modoEtapa1) {
+                // ---- MODO ETAPA 1 (LÉXICO) ----
                 Token t = null;
                 while ((t = lexer.nextToken()).getType() != Token.EOF) {
                     String nomeToken = LALexer.VOCABULARY.getDisplayName(t.getType());
@@ -44,20 +64,17 @@ public class Principal {
                         break;
                     }
 
-                    // Formatação de tokens válidos para a etapa 1
                     if (nomeToken.equals("IDENT") || nomeToken.equals("CADEIA") || nomeToken.equals("NUM_INT") || nomeToken.equals("NUM_REAL")) {
                         pw.println("<'" + textoToken + "'," + nomeToken + ">");
                     } else {
                         pw.println("<'" + textoToken + "','" + textoToken + "'>");
                     }
                 }
-            }
-            // Fluxo principal para T2 e etapas seguintes (Análise Sintática)
-            else {
+            } else {
+                // ---- MODO ETAPA 2 (SINTÁTICO) ----
                 CommonTokenStream tokens = new CommonTokenStream(lexer);
                 LAParser parser = new LAParser(tokens);
 
-                // Associa o ErrorListener customizado para salvar os erros no arquivo ao invés do terminal
                 CustomErrorListener mcel = new CustomErrorListener(pw);
                 lexer.removeErrorListeners();
                 lexer.addErrorListener(mcel);
@@ -65,10 +82,8 @@ public class Principal {
                 parser.addErrorListener(mcel);
 
                 try {
-                    // Inicia a análise chamando a regra raiz da gramática
                     parser.programa();
                 } catch (RuntimeException e) {
-                    // Captura a exceção forçada pelo ErrorListener para não poluir o console do usuário
                     if (!e.getMessage().equals("ParseError")) {
                         throw e;
                     }
@@ -76,7 +91,7 @@ public class Principal {
             }
 
         } catch (IOException e) {
-            System.err.println("Erro ao manipular os arquivos: " + e.getMessage());
+            System.err.println("Erro ao manipular os ficheiros: " + e.getMessage());
         }
     }
 }

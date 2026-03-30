@@ -20,17 +20,17 @@ Certifique-se de ter os seguintes programas e versões instalados:
 
 - **Versão mínima:** Java 11 ou superior
 - **Como verificar:**
-  ```bash
-  java -version
-  ```
+```bash
+java -version
+```
 
 ### Maven
 
 - **Versão mínima:** Maven 3.8.0 ou superior
 - **Como verificar:**
-  ```bash
-  mvn -version
-  ```
+```bash
+mvn -version
+```
 
 ## Configuração de JAVA_HOME
 
@@ -46,15 +46,14 @@ java -version
 
 ## Como Compilar
 
-1. Clone e acesse o repositório:
+1. Clone e acesse o repositório.
 
 2. Acesse a pasta do projeto Maven:
-
    ```bash
    cd compilador
    ```
 
-3. Compile o projeto (gera JAR executável):
+3. Compile o projeto (gera o JAR executável):
    ```bash
    mvn clean package
    ```
@@ -63,21 +62,21 @@ java -version
 
 ### Execução Manual
 
-Após compilar, execute o compilador informando arquivo de entrada (.la) e arquivo de saída (.txt):
+Após compilar, execute o compilador informando o arquivo de entrada (.la) e o arquivo de saída (.txt). Opcionalmente, pode ser utilizada a flag -t1 para forçar a execução no formato de saída do Trabalho 1 (apenas tokens léxicos).
 
 ```bash
-cd compilador
-
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
-    caminho/entrada.la caminho/saida.txt
+    [-t1] caminho/entrada.la caminho/saida.txt
 ```
 
 **Parâmetros:**
+- [-t1] -> **(Opcional)** Força a saída de tokens léxicos válidos (Modo T1). Se omitido, o compilador roda no modo silencioso de análise sintática (Modo T2).
+- caminho/entrada.la -> Arquivo com o código-fonte em linguagem LA.
+- caminho/saida.txt -> Arquivo onde será escrito o resultado da análise.
 
-- `caminho/entrada.la` → Arquivo com código em linguagem LA
-- `caminho/saida.txt` → Arquivo onde será escrito o resultado da análise.
+### Exemplo de Uso (Modo T2 - Sintático)
 
-### Exemplo de Uso
+Comportamento padrão (exigido para a avaliação do T2):
 
 ```bash
 # A partir da pasta 'compilador'
@@ -88,23 +87,29 @@ cat saida.txt
 ```
 
 **Saída esperada (se não houver erros):**
-
 ```
 Fim da compilacao
 ```
 
 **Saída esperada (em caso de erro sintático):**
-
 ```
 Linha 10: erro sintatico proximo a leia
 Fim da compilacao
 ```
 
+### Exemplo de Uso (Modo T1 - Léxico com Flag)
+
+```bash
+java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    -t1 ../testes/etapa1/caso1_entrada.la saida_lexica.txt
+```
+Isso fará o compilador imprimir todos os tokens lidos <'lexema','token'> até o final do arquivo ou até o primeiro erro léxico.
+
 ## Executar Testes Automatizados
 
-Os casos de teste estão organizados em `/testes` por etapa (etapa1, etapa2, etapa3, etc.). O script `run-tests.sh` automatiza a compilação e execução dos testes. O compilador foi adaptado para manter compatibilidade com a saída exigida no Trabalho 1 (T1) quando testado na pasta etapa1.
+Os casos de teste estão organizados em /testes por etapa (etapa1, etapa2, etc.). O script run-tests.sh automatiza a compilação e execução dos testes chamando o programa com 2 argumentos.
 
-**Nota:** O script `run-tests.sh` detecta e configura `JAVA_HOME` automaticamente.
+**Nota:** O nosso compilador possui um fallback de segurança que detecta a pasta etapa1 no caminho do arquivo, garantindo que os testes antigos passem automaticamente mesmo sem a flag -t1. O script também detecta e configura JAVA_HOME automaticamente.
 
 ### Executar Todos os Testes
 
@@ -112,19 +117,12 @@ Os casos de teste estão organizados em `/testes` por etapa (etapa1, etapa2, eta
 ./run-tests.sh
 ```
 
-Compila o projeto e executa todos os testes de todas as etapas, exibindo resultado (PASS/FAIL).
+Compila o projeto e executa todos os testes de todas as etapas, exibindo o resultado (PASS/FAIL).
 
 ### Executar Testes de uma Etapa Específica
 
+Para focar apenas na validação do analisador sintático (T2):
+
 ```bash
-./run-tests.sh etapa1   # Testa apenas etapa1
-./run-tests.sh etapa2   # Testa apenas etapa2
-./run-tests.sh etapa3   # Testa apenas etapa3
+./run-tests.sh etapa2
 ```
-
-### Resultado dos Testes
-
-Cada teste exibe:
-
-- **PASS** → Saída do compilador corresponde à esperada
-- **FAIL** → Saída diferente da esperada (mostra primeiras linhas)
