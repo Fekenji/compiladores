@@ -107,9 +107,9 @@ Isso fará o compilador imprimir todos os tokens lidos <'lexema','token'> até o
 
 ## Executar Testes Automatizados
 
-Os casos de teste estão organizados em /testes por etapa (etapa1, etapa2, etc.). O script run-tests.sh automatiza a compilação e execução dos testes chamando o programa com 2 argumentos.
+Os casos de teste utilizados pelo script estão em /testes/testComp, separados por tipo (T1..T5). O script run-tests.sh automatiza a compilação e execução.
 
-**Nota:** O nosso compilador possui um fallback de segurança que detecta a pasta etapa1 no caminho do arquivo, garantindo que os testes antigos passem automaticamente mesmo sem a flag -t1. O script também detecta e configura JAVA_HOME automaticamente.
+**Nota:** O script detecta e configura JAVA_HOME automaticamente quando necessário. Para T1, ele executa o compilador com a flag -t1.
 
 ### Executar Todos os Testes
 
@@ -117,7 +117,7 @@ Os casos de teste estão organizados em /testes por etapa (etapa1, etapa2, etc.)
 ./run-tests.sh
 ```
 
-Compila o projeto e executa todos os testes de todas as etapas, exibindo o resultado (PASS/FAIL).
+Compila o projeto e executa os testes locais de T1 a T4 (testComp), exibindo o resultado (PASS/FAIL).
 
 ### Executar Testes de uma Etapa Específica
 
@@ -125,4 +125,14 @@ Para focar apenas na validação do analisador sintático (T2):
 
 ```bash
 ./run-tests.sh etapa2
+```
+
+Etapas válidas no modo local: etapa1, etapa2, etapa3, etapa4.
+
+### Executar Corretor Original
+
+Corretor original utilizado na correção, criado pelo professor Lucrédio.
+
+```bash
+./run-tests.sh corretor
 ```
