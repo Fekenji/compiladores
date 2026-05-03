@@ -10,7 +10,7 @@ Projeto da disciplina de Construção de Compiladores 2026/01 da UFSCar.
 
 ## Sobre
 
-Este repositório contém um compilador para a linguagem LA, desenvolvido em etapas incrementais. Atualmente implementa o **analisador sintático e léxico (T2)**, responsável por tokenizar programas em LA e realizar a análise sintática, apontando erros (léxicos ou sintáticos) com a respectiva linha e lexema.
+Este repositório contém um compilador para a linguagem LA, desenvolvido em etapas incrementais. Atualmente implementa o **analisador semântico (T3)**, que além das análises léxica e sintática (T1 e T2), detecta erros semânticos como: identificadores duplicados, tipos não declarados, identificadores não declarados e atribuições incompatíveis com o tipo declarado.
 
 ## Pré-requisitos
 
@@ -62,26 +62,45 @@ java -version
 
 ### Execução Manual
 
-Após compilar, execute o compilador informando o arquivo de entrada (.la) e o arquivo de saída (.txt). Opcionalmente, pode ser utilizada a flag -t1 para forçar a execução no formato de saída do Trabalho 1 (apenas tokens léxicos).
+Após compilar, execute o compilador informando o arquivo de entrada (.la) e o arquivo de saída (.txt). Opcionalmente, pode ser utilizada a flag `-t1` para forçar a execução no formato de saída do Trabalho 1 (tokens léxicos) ou `-t2` para o formato do Trabalho 2 (análise sintática).
 
 ```bash
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
-    [-t1] caminho/entrada.la caminho/saida.txt
+    [-t1|-t2] caminho/entrada.la caminho/saida.txt
 ```
 
 **Parâmetros:**
-- [-t1] -> **(Opcional)** Força a saída de tokens léxicos válidos (Modo T1). Se omitido, o compilador roda no modo silencioso de análise sintática (Modo T2).
+- [-t1] -> **(Opcional)** Força a saída de tokens léxicos válidos (Modo T1).
+- [-t2] -> **(Opcional)** Força a saída de análise sintática (Modo T2).
+- Se omitido, o compilador roda no modo de análise semântica (Modo T3 — padrão).
 - caminho/entrada.la -> Arquivo com o código-fonte em linguagem LA.
 - caminho/saida.txt -> Arquivo onde será escrito o resultado da análise.
 
-### Exemplo de Uso (Modo T2 - Sintático)
+### Exemplo de Uso (Modo T3 - Semântico)
 
-Comportamento padrão (exigido para a avaliação do T2):
+Comportamento padrão (exigido para a avaliação do T3):
 
 ```bash
 # A partir da pasta 'compilador'
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
-    ../testes/etapa2/caso1_entrada.la saida.txt
+    ../testes/testComp/3.casos_teste_t3/entrada/1.algoritmo_2-2_apostila_LA.txt saida.txt
+
+cat saida.txt
+```
+
+**Saída esperada (quando há erros semânticos):**
+```
+Linha 7: tipo inteir nao declarado
+Linha 11: identificador idades nao declarado
+Fim da compilacao
+```
+
+### Exemplo de Uso (Modo T2 - Sintático)
+
+```bash
+# A partir da pasta 'compilador'
+java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    -t2 ../testes/testComp/2.casos_teste_t2/entrada/1-algoritmo_2-2_apostila_LA_1_erro_linha_3_acusado_linha_10.txt saida.txt
 
 cat saida.txt
 ```
@@ -101,7 +120,9 @@ Fim da compilacao
 
 ```bash
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
-    -t1 ../testes/etapa1/caso1_entrada.la saida_lexica.txt
+    -t1 ../testes/testComp/1.casos_teste_t1/entrada/1-algoritmo_2-2_apostila_LA.txt saida.txt
+
+cat saida.txt
 ```
 Isso fará o compilador imprimir todos os tokens lidos <'lexema','token'> até o final do arquivo ou até o primeiro erro léxico.
 
