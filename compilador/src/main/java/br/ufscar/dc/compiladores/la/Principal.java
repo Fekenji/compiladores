@@ -132,6 +132,7 @@ public class Principal {
 
             // Fase 2: Análise semântica (percorre a árvore com o visitor)
             LASemanticoUtils.errosSemanticos.clear();
+            LASemanticoUtils.parametrosFuncoes.clear();
             LASemantico semantico = new LASemantico();
             semantico.visit(arvore);
 

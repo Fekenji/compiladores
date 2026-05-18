@@ -5,21 +5,23 @@ import br.ufscar.dc.compiladores.la.TabelaDeSimbolos.EntradaTabelaDeSimbolos;
 import org.antlr.v4.runtime.Token;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Classe utilitária para o analisador semântico da linguagem LA. */
 public class LASemanticoUtils {
 
-    // Lista global de erros semânticos encontrados durante a análise
     public static List<String> errosSemanticos = new ArrayList<>();
 
-    /** Adiciona um erro semântico à lista de erros. */
+    // Mapa de nome de função/procedimento → lista de tipos dos parâmetros formais
+    public static Map<String, List<TipoLA>> parametrosFuncoes = new HashMap<>();
+
     public static void adicionarErroSemantico(Token t, String mensagem) {
         int linha = t.getLine();
         errosSemanticos.add(String.format("Linha %d: %s", linha, mensagem));
     }
 
-    /** Converte o nome textual de um tipo básico para o enum TipoLA. */
     public static TipoLA getTipoPorNome(String nomeDoTipo) {
         switch (nomeDoTipo) {
             case "inteiro": return TipoLA.INTEIRO;
@@ -30,13 +32,11 @@ public class LASemanticoUtils {
         }
     }
 
-    /** Verifica se um nome corresponde a um tipo básico da linguagem LA. */
     public static boolean ehTipoBasico(String nome) {
         return nome.equals("inteiro") || nome.equals("real")
             || nome.equals("literal") || nome.equals("logico");
     }
 
-    /** Busca um identificador em todos os escopos (do mais interno ao mais externo). */
     public static EntradaTabelaDeSimbolos buscarEscopos(Escopo escopos, String nome) {
         for (TabelaDeSimbolos tabela : escopos.obterTodosEscopos()) {
             if (tabela.existe(nome)) {
@@ -46,39 +46,28 @@ public class LASemanticoUtils {
         return null;
     }
 
-    /** Verifica se um identificador já foi declarado em algum escopo ativo. */
     public static boolean existeEmAlgumEscopo(Escopo escopos, String nome) {
         return buscarEscopos(escopos, nome) != null;
     }
 
-    /** Verifica se dois tipos são compatíveis para atribuição. */
     public static boolean tiposCompativeis(TipoLA tipoEsquerda, TipoLA tipoDireita) {
-        // Tipos inválidos ou não declarados são sempre incompatíveis
         if (tipoEsquerda == TipoLA.INVALIDO || tipoDireita == TipoLA.INVALIDO
          || tipoEsquerda == TipoLA.NAO_DECLARADO || tipoDireita == TipoLA.NAO_DECLARADO) {
             return false;
         }
-
-        // Ponteiro recebe endereço
         if (tipoEsquerda == TipoLA.PONTEIRO && tipoDireita == TipoLA.ENDERECO) {
             return true;
         }
-
-        // Numéricos são compatíveis entre si
         if (ehNumerico(tipoEsquerda) && ehNumerico(tipoDireita)) {
             return true;
         }
-
-        // Demais tipos devem ser iguais (literal=literal, logico=logico, etc.)
         return tipoEsquerda == tipoDireita;
     }
 
-    /** Verifica se um tipo é numérico (inteiro ou real). */
     public static boolean ehNumerico(TipoLA tipo) {
         return tipo == TipoLA.INTEIRO || tipo == TipoLA.REAL;
     }
 
-    /** Infere o tipo resultante de uma operação aritmética entre dois tipos numéricos. */
     public static TipoLA inferirTipoOperacao(TipoLA tipo1, TipoLA tipo2) {
         if (tipo1 == TipoLA.INVALIDO || tipo2 == TipoLA.INVALIDO) {
             return TipoLA.INVALIDO;
@@ -86,37 +75,47 @@ public class LASemanticoUtils {
         if (tipo1 == TipoLA.NAO_DECLARADO || tipo2 == TipoLA.NAO_DECLARADO) {
             return TipoLA.INVALIDO;
         }
-
-        // Numéricos são compatíveis em operações aritméticas
         if (ehNumerico(tipo1) && ehNumerico(tipo2)) {
             if (tipo1 == TipoLA.REAL || tipo2 == TipoLA.REAL) {
                 return TipoLA.REAL;
             }
             return TipoLA.INTEIRO;
         }
-
-        // Literal + literal (concatenação) — embora raro em aritmética, é válido
         if (tipo1 == TipoLA.LITERAL && tipo2 == TipoLA.LITERAL) {
             return TipoLA.LITERAL;
         }
-
-        // Tipos incompatíveis em operação aritmética
         return TipoLA.INVALIDO;
     }
 
-    // ==================== Métodos de inferência de tipo para expressões ====================
+    /** Verifica compatibilidade estrita de tipos para passagem de parâmetros. */
+    public static boolean tiposCompativeisParametro(TipoLA tipoParam, TipoLA tipoArg) {
+        if (tipoArg == TipoLA.INVALIDO || tipoArg == TipoLA.NAO_DECLARADO) return true; // skip
+        if (tipoParam == TipoLA.INVALIDO || tipoParam == TipoLA.NAO_DECLARADO) return false;
+        if (tipoParam == TipoLA.PONTEIRO && tipoArg == TipoLA.ENDERECO) return true;
+        return tipoParam == tipoArg;
+    }
 
-    /** Infere o tipo de uma expressão completa (com operadores lógicos 'ou'). */
+    /** Verifica se os argumentos são compatíveis com os parâmetros formais. */
+    public static boolean parametrosCompativeis(List<TipoLA> tiposParams, List<TipoLA> tiposArgs) {
+        if (tiposParams.size() != tiposArgs.size()) return false;
+        for (int i = 0; i < tiposParams.size(); i++) {
+            if (!tiposCompativeisParametro(tiposParams.get(i), tiposArgs.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ==================== Inferência de tipo ====================
+
     public static TipoLA inferirTipo(Escopo escopos, LAParser.ExpressaoContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.termo_logico(0));
         for (int i = 1; i < ctx.termo_logico().size(); i++) {
-            // Operador 'ou' requer operandos lógicos, resultado é lógico
             tipo = TipoLA.LOGICO;
         }
         return tipo;
     }
 
-    /** Infere o tipo de um termo lógico (com operadores 'e'). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Termo_logicoContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.fator_logico(0));
         for (int i = 1; i < ctx.fator_logico().size(); i++) {
@@ -125,12 +124,10 @@ public class LASemanticoUtils {
         return tipo;
     }
 
-    /** Infere o tipo de um fator lógico (com possível 'nao'). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Fator_logicoContext ctx) {
         return inferirTipo(escopos, ctx.parcela_logica());
     }
 
-    /** Infere o tipo de uma parcela lógica ('verdadeiro'/'falso' ou expressão relacional). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Parcela_logicaContext ctx) {
         if (ctx.getText().equals("verdadeiro") || ctx.getText().equals("falso")) {
             return TipoLA.LOGICO;
@@ -138,19 +135,15 @@ public class LASemanticoUtils {
         return inferirTipo(escopos, ctx.exp_relacional());
     }
 
-    /** Infere o tipo de uma expressão relacional. */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Exp_relacionalContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.exp_aritmetica(0));
         if (ctx.op_relacional() != null) {
-            // Presença de operador relacional → resultado é lógico
-            // Mas ainda precisamos verificar o tipo do segundo operando
             inferirTipo(escopos, ctx.exp_aritmetica(1));
             return TipoLA.LOGICO;
         }
         return tipo;
     }
 
-    /** Infere o tipo de uma expressão aritmética (com + e -). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Exp_aritmeticaContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.termo(0));
         for (int i = 1; i < ctx.termo().size(); i++) {
@@ -160,7 +153,6 @@ public class LASemanticoUtils {
         return tipo;
     }
 
-    /** Infere o tipo de um termo (com  e /). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.TermoContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.fator(0));
         for (int i = 1; i < ctx.fator().size(); i++) {
@@ -170,7 +162,6 @@ public class LASemanticoUtils {
         return tipo;
     }
 
-    /** Infere o tipo de um fator (com %). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.FatorContext ctx) {
         TipoLA tipo = inferirTipo(escopos, ctx.parcela(0));
         for (int i = 1; i < ctx.parcela().size(); i++) {
@@ -180,7 +171,6 @@ public class LASemanticoUtils {
         return tipo;
     }
 
-    /** Infere o tipo de uma parcela (unária ou não-unária). */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.ParcelaContext ctx) {
         if (ctx.parcela_unario() != null) {
             return inferirTipo(escopos, ctx.parcela_unario());
@@ -188,29 +178,29 @@ public class LASemanticoUtils {
         return inferirTipo(escopos, ctx.parcela_nao_unario());
     }
 
-    /** Infere o tipo de uma parcela unária: identificador, chamada de função, */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Parcela_unarioContext ctx) {
         // Caso 1: identificador (com possível ^)
         if (ctx.identificador() != null) {
-            String nomeId = ctx.identificador().IDENT(0).getText();
-            EntradaTabelaDeSimbolos entrada = buscarEscopos(escopos, nomeId);
+            String nomeBase = ctx.identificador().IDENT(0).getText();
+            // Construir nome completo para erros e lookup
+            StringBuilder sbNome = new StringBuilder(nomeBase);
+            for (int i = 1; i < ctx.identificador().IDENT().size(); i++) {
+                sbNome.append(".").append(ctx.identificador().IDENT(i).getText());
+            }
+            String nomeCompleto = sbNome.toString();
+
+            EntradaTabelaDeSimbolos entrada = buscarEscopos(escopos, nomeBase);
             if (entrada == null) {
-                // Identificador não declarado — erro será reportado pelo visitor
                 adicionarErroSemantico(ctx.identificador().IDENT(0).getSymbol(),
-                    "identificador " + nomeId + " nao declarado");
+                    "identificador " + nomeCompleto + " nao declarado");
                 return TipoLA.NAO_DECLARADO;
             }
-            // Se for acesso a campo de registro (ident.campo), retornar o tipo do campo
             if (ctx.identificador().IDENT().size() > 1) {
-                String nomeCompleto = "";
-                for (int i = 0; i < ctx.identificador().IDENT().size(); i++) {
-                    if (i > 0) nomeCompleto += ".";
-                    nomeCompleto += ctx.identificador().IDENT(i).getText();
-                }
                 EntradaTabelaDeSimbolos entradaCompleta = buscarEscopos(escopos, nomeCompleto);
                 if (entradaCompleta != null) {
                     return entradaCompleta.tipo;
                 }
+                // Campo não encontrado mas base existe: retornar tipo base
             }
             return entrada.tipo;
         }
@@ -224,9 +214,16 @@ public class LASemanticoUtils {
                     "identificador " + nomeFuncao + " nao declarado");
                 return TipoLA.NAO_DECLARADO;
             }
-            // Verificar tipos dos argumentos (inferir tipos para detectar erros internos)
+            // Inferir tipos dos argumentos
+            List<TipoLA> tiposArgs = new ArrayList<>();
             for (LAParser.ExpressaoContext expr : ctx.expressao()) {
-                inferirTipo(escopos, expr);
+                tiposArgs.add(inferirTipo(escopos, expr));
+            }
+            // Verificar compatibilidade com parâmetros formais
+            List<TipoLA> tiposParams = parametrosFuncoes.get(nomeFuncao);
+            if (tiposParams != null && !parametrosCompativeis(tiposParams, tiposArgs)) {
+                adicionarErroSemantico(ctx.IDENT().getSymbol(),
+                    "incompatibilidade de parametros na chamada de " + nomeFuncao);
             }
             return entrada.tipo;
         }
@@ -241,7 +238,7 @@ public class LASemanticoUtils {
             return TipoLA.REAL;
         }
 
-        // Caso 5: '(' expressao ')' — expressão entre parênteses
+        // Caso 5: '(' expressao ')'
         if (ctx.expressao() != null && !ctx.expressao().isEmpty()) {
             return inferirTipo(escopos, ctx.expressao(0));
         }
@@ -249,13 +246,10 @@ public class LASemanticoUtils {
         return TipoLA.INVALIDO;
     }
 
-    /** Infere o tipo de uma parcela não-unária: '&' identificador ou CADEIA. */
     public static TipoLA inferirTipo(Escopo escopos, LAParser.Parcela_nao_unarioContext ctx) {
-        // '&' identificador → tipo ENDERECO
         if (ctx.identificador() != null) {
             return TipoLA.ENDERECO;
         }
-        // CADEIA → tipo LITERAL
         if (ctx.CADEIA() != null) {
             return TipoLA.LITERAL;
         }
