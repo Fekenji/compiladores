@@ -18,8 +18,8 @@ public class Principal {
             return;
         }
 
-        // Modos de execução: T1 (léxico), T2 (sintático), T3 (semântico, padrão)
-        String modo = "t3"; // Padrão: análise semântica
+        // Modos de execução: T1 (léxico), T2 (sintático), padrão (semântico + gerador de código)
+        String modo = "padrao";
         String arquivoEntrada = "";
         String arquivoSaida = "";
 
@@ -50,15 +50,10 @@ public class Principal {
             LALexer lexer = new LALexer(cs);
 
             if (modo.equals("t1")) {
-                // ---- MODO ETAPA 1 (LÉXICO) ----
                 executarModoLexico(lexer, pw);
-
             } else if (modo.equals("t2")) {
-                // ---- MODO ETAPA 2 (SINTÁTICO) ----
                 executarModoSintatico(lexer, pw);
-
             } else {
-                // ---- MODO ETAPA 3/5 — SEMÂNTICO + GERAÇÃO DE CÓDIGO ----
                 executarModoSemanticoEGerador(lexer, pw);
             }
 
@@ -155,41 +150,4 @@ public class Principal {
         }
     }
 
-    /** Modo T3: Análise semântica — detecta erros semânticos sem interromper. */
-    private static void executarModoSemantico(LALexer lexer, PrintWriter pw) {
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        LAParser parser = new LAParser(tokens);
-
-        // Configurar listeners para capturar erros léxicos/sintáticos
-        CustomErrorListener mcel = new CustomErrorListener(pw);
-        lexer.removeErrorListeners();
-        lexer.addErrorListener(mcel);
-        parser.removeErrorListeners();
-        parser.addErrorListener(mcel);
-
-        try {
-            // Fase 1: Parsing (gera a árvore sintática)
-            LAParser.ProgramaContext arvore = parser.programa();
-
-            // Fase 2: Análise semântica (percorre a árvore com o visitor)
-            LASemanticoUtils.errosSemanticos.clear();
-            LASemanticoUtils.parametrosFuncoes.clear();
-            LASemantico semantico = new LASemantico();
-            semantico.visit(arvore);
-
-            // Escrever todos os erros semânticos encontrados
-            for (String erro : LASemanticoUtils.errosSemanticos) {
-                pw.println(erro);
-            }
-
-        } catch (RuntimeException e) {
-            // Se houve erro léxico/sintático, o CustomErrorListener já escreveu
-            if (!e.getMessage().equals("ParseError")) {
-                throw e;
-            }
-            return; // Não escrever "Fim da compilacao" novamente (já foi escrito pelo listener)
-        }
-
-        pw.println("Fim da compilacao");
-    }
 }

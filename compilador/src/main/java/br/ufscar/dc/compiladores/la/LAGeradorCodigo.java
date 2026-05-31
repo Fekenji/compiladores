@@ -17,7 +17,8 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
     private final Escopo escopos = new Escopo();
     private int indentacao = 0;
 
-    // Tipos de registro definidos globalmente (tipo X: registro)
+    // Nomes dos tipos registro definidos via "tipo X: registro" — usados para
+    // distinguir typedef struct (global) de struct inline durante a geração.
     private final List<String> tiposRegistroDefinidos = new ArrayList<>();
 
     public LAGeradorCodigo(PrintWriter out) {
@@ -250,7 +251,6 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
                     for (LAParser.IdentificadorContext idCtx : campo.identificador()) {
                         escopos.escopoAtual().inserir(nomeTipo + "." + idCtx.IDENT(0).getText(),
                                 tipoCampo, campo.tipo().tipo_estendido().tipo_basico_ident().getText());
-                        // emitir campo
                         emitirCampoStruct(campo.tipo().tipo_estendido(), idCtx.IDENT(0).getText());
                     }
                 }
@@ -315,7 +315,6 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
         String nome = ctx.IDENT().getText();
         boolean ehFuncao = ctx.tipo_estendido() != null;
 
-        // Cabeçalho
         StringBuilder cabecalho = new StringBuilder();
         if (ehFuncao) {
             String tipoRetC = tipoCParaTipoEstendido(ctx.tipo_estendido());
@@ -357,12 +356,9 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
         out.println(cabecalho.toString());
         indentacao++;
 
-        // Declarações locais
         for (LAParser.Declaracao_localContext dl : ctx.declaracao_local()) {
             visitDeclaracao_local(dl);
         }
-
-        // Comandos
         for (LAParser.CmdContext cmd : ctx.cmd()) {
             visit(cmd);
         }
@@ -522,7 +518,7 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
         indentacao++;
 
         for (LAParser.Item_selecaoContext item : ctx.selecao().item_selecao()) {
-            // Expandir todos os intervalos e valores
+                // "caso" permite múltiplos intervalos por item (ex: 1,3..5); cada um vira case labels
             for (LAParser.Numero_intervaloContext ni : item.constantes().numero_intervalo()) {
                 expandirIntervalo(ni);
             }
@@ -604,7 +600,7 @@ public class LAGeradorCodigo extends LAParserBaseVisitor<Void> {
         for (LAParser.CmdContext cmd : ctx.cmd()) visit(cmd);
         indentacao--;
         String cond = gerarExpressao(ctx.expressao());
-        // faca...ate cond is "do...while cond" (cond is the continuation condition in C)
+        // "faca...ate expr" em LA significa "repita enquanto expr for verdadeira" (como do-while)
         emitirLinha("} while (" + cond + ");");
         return null;
     }
