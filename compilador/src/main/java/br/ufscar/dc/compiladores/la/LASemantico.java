@@ -162,7 +162,11 @@ public class LASemantico extends LAParserBaseVisitor<Void> {
 
         TipoLA tipoDestino = entrada.tipo;
         if (temPonteiro) {
-            tipoDestino = TipoLA.PONTEIRO;
+            // ^var <- expr: destination is the type the pointer points to
+            // nomeTipo may be "^inteiro" or "inteiro"; strip leading ^
+            String nomeTipoBase = entrada.nomeTipo.replace("^", "");
+            tipoDestino = LASemanticoUtils.getTipoPorNome(nomeTipoBase);
+            if (tipoDestino == TipoLA.NAO_DECLARADO) tipoDestino = TipoLA.INVALIDO;
         }
 
         if (!LASemanticoUtils.tiposCompativeis(tipoDestino, tipoExpressao)) {

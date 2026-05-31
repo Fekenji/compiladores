@@ -58,8 +58,8 @@ public class Principal {
                 executarModoSintatico(lexer, pw);
 
             } else {
-                // ---- MODO ETAPA 3 (SEMÂNTICO) — PADRÃO ----
-                executarModoSemantico(lexer, pw);
+                // ---- MODO ETAPA 3/5 — SEMÂNTICO + GERAÇÃO DE CÓDIGO ----
+                executarModoSemanticoEGerador(lexer, pw);
             }
 
         } catch (IOException e) {
@@ -111,6 +111,47 @@ public class Principal {
             if (!e.getMessage().equals("ParseError")) {
                 throw e;
             }
+        }
+    }
+
+    /**
+     * Modo padrão (T5): análise semântica seguida de geração de código C.
+     * Se houver erros léxicos/sintáticos/semânticos, emite os erros.
+     * Caso contrário, emite o código C gerado.
+     */
+    private static void executarModoSemanticoEGerador(LALexer lexer, PrintWriter pw) {
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        LAParser parser = new LAParser(tokens);
+
+        CustomErrorListener mcel = new CustomErrorListener(pw);
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(mcel);
+        parser.removeErrorListeners();
+        parser.addErrorListener(mcel);
+
+        try {
+            LAParser.ProgramaContext arvore = parser.programa();
+
+            // Fase semântica
+            LASemanticoUtils.errosSemanticos.clear();
+            LASemanticoUtils.parametrosFuncoes.clear();
+            LASemantico semantico = new LASemantico();
+            semantico.visit(arvore);
+
+            if (!LASemanticoUtils.errosSemanticos.isEmpty()) {
+                for (String erro : LASemanticoUtils.errosSemanticos) {
+                    pw.println(erro);
+                }
+                pw.println("Fim da compilacao");
+                return;
+            }
+
+            // Fase de geração de código
+            LAGeradorCodigo gerador = new LAGeradorCodigo(pw);
+            gerador.visit(arvore);
+
+        } catch (RuntimeException e) {
+            if (!e.getMessage().equals("ParseError")) throw e;
         }
     }
 

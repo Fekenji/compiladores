@@ -119,9 +119,8 @@ run_etapa() {
     saida_dir="$etapa_dir/saida"
 
     if [ "$etapa" = "etapa5" ]; then
-        echo -e "${YELLOW}Aviso:${NC} etapa5 no modo local requer pipeline completo do corretor oficial."
-        echo "Use: ./run-tests.sh corretor"
-        return 1
+        run_etapa5_local
+        return $?
     fi
     
     if [ -z "$testcomp_case" ] || [ ! -d "$entrada_dir" ] || [ ! -d "$saida_dir" ]; then
@@ -165,6 +164,52 @@ run_etapa() {
         echo ""
     fi
     
+    return $([ $failed -eq 0 ] && echo 0 || echo 1)
+}
+
+# Função para executar testes locais da etapa5 (geração de código)
+run_etapa5_local() {
+    local etapa_dir="$TESTES_DIR/testComp/5.casos_teste_t5"
+    local entrada_dir="$etapa_dir/1.entrada"
+    local execucao_dir="$etapa_dir/3.entrada_execucao"
+    local saida_dir="$etapa_dir/4.saida"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    print_header "Executando testes de etapa5 (geração de código C)"
+    local passed=0; local failed=0; local test_count=0
+    for f in "$entrada_dir"/*.alg; do
+        [ -f "$f" ] || continue
+        test_count=$((test_count + 1))
+        local nome; nome=$(basename "$f")
+        local csrc="$tmpdir/$nome.c"
+        local cbin="$tmpdir/$nome.bin"
+        java -jar "$JAR_FILE" "$f" "$csrc" 2>/dev/null
+        if ! gcc -w -o "$cbin" "$csrc" 2>/dev/null; then
+            echo -e "${RED}✗ FAIL${NC}: etapa5/$nome (erro de compilação C)"
+            failed=$((failed + 1)); continue
+        fi
+        local inexec="$execucao_dir/$nome"
+        local actual
+        if [ -f "$inexec" ]; then
+            actual=$("$cbin" < "$inexec" 2>/dev/null)
+        else
+            actual=$("$cbin" 2>/dev/null)
+        fi
+        local expected; expected=$(cat "$saida_dir/$nome" 2>/dev/null)
+        if [ "$actual" = "$expected" ]; then
+            echo -e "${GREEN}✓ PASS${NC}: etapa5/$nome"
+            passed=$((passed + 1))
+        else
+            echo -e "${RED}✗ FAIL${NC}: etapa5/$nome"
+            echo "  Esperado: |$(echo "$expected" | head -c 60)|"
+            echo "  Obtido:   |$(echo "$actual" | head -c 60)|"
+            failed=$((failed + 1))
+        fi
+    done
+    rm -rf "$tmpdir"
+    echo ""
+    echo -e "Resultados: ${GREEN}$passed passou${NC}, ${RED}$failed falharam${NC} (total: $test_count)"
+    echo ""
     return $([ $failed -eq 0 ] && echo 0 || echo 1)
 }
 
@@ -248,7 +293,7 @@ main() {
         # Executa etapas locais baseadas em testComp
         print_header "Executando testes locais (testComp)"
 
-        for etapa in etapa1 etapa2 etapa3 etapa4; do
+        for etapa in etapa1 etapa2 etapa3 etapa4 etapa5; do
             if ! run_etapa "$etapa"; then
                 total_failed=$((total_failed + 1))
             else
@@ -267,7 +312,7 @@ main() {
         fi
         if [ "$1" != "etapa1" ] && [ "$1" != "etapa2" ] && [ "$1" != "etapa3" ] && [ "$1" != "etapa4" ] && [ "$1" != "etapa5" ]; then
             echo -e "${RED}Etapa inválida: $1${NC}"
-            echo "Use: etapa1, etapa2, etapa3, etapa4, etapa5 ou corretor"
+            echo "Use: etapa1, etapa2, etapa3, etapa4, etapa5, ou corretor"
             exit 1
         fi
         # Executa apenas a etapa especificada
