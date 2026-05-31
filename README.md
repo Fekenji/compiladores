@@ -10,7 +10,12 @@ Projeto da disciplina de Construção de Compiladores 2026/01 da UFSCar.
 
 ## Sobre
 
-Este repositório contém um compilador para a linguagem LA, desenvolvido em etapas incrementais. Atualmente implementa o **analisador semântico (T3)**, que além das análises léxica e sintática (T1 e T2), detecta erros semânticos como: identificadores duplicados, tipos não declarados, identificadores não declarados e atribuições incompatíveis com o tipo declarado.
+Este repositório contém um compilador completo para a linguagem LA, desenvolvido em etapas incrementais:
+
+- **T1** — Analisador léxico (tokenização)
+- **T2** — Analisador sintático
+- **T3/T4** — Analisador semântico (identificadores duplicados/não declarados, tipos incompatíveis, retorne fora de função, erros em chamadas de função, etc.)
+- **T5** — Gerador de código C: produz código C compilável e executável equivalente ao programa LA de entrada
 
 ## Pré-requisitos
 
@@ -60,9 +65,17 @@ java -version
 
 ## Como Executar o Compilador
 
+### Pré-requisito adicional para T5
+
+O gerador de código (T5) produz um arquivo `.c` que precisa ser compilado com GCC:
+
+```bash
+gcc --version   # qualquer versão recente serve
+```
+
 ### Execução Manual
 
-Após compilar, execute o compilador informando o arquivo de entrada (.la) e o arquivo de saída (.txt). Opcionalmente, pode ser utilizada a flag `-t1` para forçar a execução no formato de saída do Trabalho 1 (tokens léxicos) ou `-t2` para o formato do Trabalho 2 (análise sintática).
+Após compilar, execute o compilador informando o arquivo de entrada e o arquivo de saída. São dois argumentos obrigatórios; a flag opcional `-t1` ou `-t2` seleciona o modo léxico/sintático.
 
 ```bash
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
@@ -70,61 +83,84 @@ java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
 ```
 
 **Parâmetros:**
-- [-t1] -> **(Opcional)** Força a saída de tokens léxicos válidos (Modo T1).
-- [-t2] -> **(Opcional)** Força a saída de análise sintática (Modo T2).
-- Se omitido, o compilador roda no modo de análise semântica (Modo T3 — padrão).
-- caminho/entrada.la -> Arquivo com o código-fonte em linguagem LA.
-- caminho/saida.txt -> Arquivo onde será escrito o resultado da análise.
+- `[-t1]` → **(Opcional)** Emite tokens léxicos (Modo T1).
+- `[-t2]` → **(Opcional)** Valida a sintaxe (Modo T2).
+- Se omitido, o compilador roda no modo padrão (T5): se houver erros léxicos/sintáticos/semânticos emite os erros; caso contrário, emite o código C gerado.
+- `caminho/entrada.la` → Arquivo com o código-fonte em linguagem LA.
+- `caminho/saida.txt` → Arquivo onde será escrito o resultado.
 
-### Exemplo de Uso (Modo T3 - Semântico)
+### Exemplo de Uso (Modo T5 — Geração de Código C)
 
-Comportamento padrão (exigido para a avaliação do T3):
+Comportamento padrão quando o programa LA não tem erros:
 
 ```bash
 # A partir da pasta 'compilador'
+java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
+    ../testes/testComp/5.casos_teste_t5/1.entrada/1.declaracao_leitura_impressao_inteiro.alg \
+    saida.c
+
+cat saida.c
+```
+
+**Saída produzida:**
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main() {
+    int x;
+    scanf("%d",&x);
+    printf("%d",x);
+    return 0;
+}
+```
+
+Para compilar e executar o código gerado:
+
+```bash
+gcc -o programa saida.c
+echo "4" | ./programa   # → imprime: 4
+```
+
+### Exemplo de Uso (Modo T3/T4 — Erros Semânticos)
+
+Quando o programa LA contém erros, o compilador os reporta (em vez de gerar código):
+
+```bash
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
     ../testes/testComp/3.casos_teste_t3/entrada/1.algoritmo_2-2_apostila_LA.txt saida.txt
 
 cat saida.txt
 ```
 
-**Saída esperada (quando há erros semânticos):**
+**Saída esperada:**
 ```
 Linha 7: tipo inteir nao declarado
 Linha 11: identificador idades nao declarado
 Fim da compilacao
 ```
 
-### Exemplo de Uso (Modo T2 - Sintático)
+### Exemplo de Uso (Modo T2 — Análise Sintática)
 
 ```bash
-# A partir da pasta 'compilador'
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
     -t2 ../testes/testComp/2.casos_teste_t2/entrada/1-algoritmo_2-2_apostila_LA_1_erro_linha_3_acusado_linha_10.txt saida.txt
 
 cat saida.txt
+# → Linha 10: erro sintatico proximo a leia
+#   Fim da compilacao
 ```
 
-**Saída esperada (se não houver erros):**
-```
-Fim da compilacao
-```
-
-**Saída esperada (em caso de erro sintático):**
-```
-Linha 10: erro sintatico proximo a leia
-Fim da compilacao
-```
-
-### Exemplo de Uso (Modo T1 - Léxico com Flag)
+### Exemplo de Uso (Modo T1 — Análise Léxica)
 
 ```bash
 java -jar target/la-lexico-1.0-SNAPSHOT-jar-with-dependencies.jar \
     -t1 ../testes/testComp/1.casos_teste_t1/entrada/1-algoritmo_2-2_apostila_LA.txt saida.txt
 
 cat saida.txt
+# → lista de tokens no formato <'lexema','TOKEN'>
 ```
-Isso fará o compilador imprimir todos os tokens lidos <'lexema','token'> até o final do arquivo ou até o primeiro erro léxico.
 
 ## Executar Testes Automatizados
 
@@ -138,17 +174,18 @@ Os casos de teste utilizados pelo script estão em /testes/testComp, separados p
 ./run-tests.sh
 ```
 
-Compila o projeto e executa os testes locais de T1 a T4 (testComp), exibindo o resultado (PASS/FAIL).
+Compila o projeto e executa os testes locais de T1 a T5, exibindo o resultado (PASS/FAIL).
 
 ### Executar Testes de uma Etapa Específica
 
-Para focar apenas na validação do analisador sintático (T2):
-
 ```bash
-./run-tests.sh etapa2
+./run-tests.sh etapa2   # apenas T2
+./run-tests.sh etapa5   # apenas T5
 ```
 
-Etapas válidas no modo local: etapa1, etapa2, etapa3, etapa4.
+Etapas válidas no modo local: `etapa1`, `etapa2`, `etapa3`, `etapa4`, `etapa5`.
+
+> **Nota sobre T5:** o script compila o código C gerado com GCC e compara a entrada/saída com o esperado. Requer `gcc` instalado.
 
 ### Executar Corretor Original
 
